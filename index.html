@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#f7f7f8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Голосовые заметки">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <title>Голосовые заметки</title>
+</head>
+<body>
+<div class="app">
+  <main id="home" class="home">
+    <header class="topbar">
+      <h1>Мои заметки</h1><button id="themeBtn" class="icon-btn" aria-label="Тема">☾</button>
+    </header>
+    <div class="search-wrap"><span>⌕</span><input id="search" type="search" placeholder="Поиск заметок…"></div>
+    <section class="content"><div class="section-label">Заметки</div><div id="notes"></div></section>
+    <button id="recordFab" class="fab" aria-label="Записать">🎙</button>
+    <nav class="nav"><button class="nav-active">☰<small>Заметки</small></button><button>☆<small>Избранное</small></button><button id="settingsBtn">⚙<small>Настройки</small></button></nav>
+  </main>
+
+  <section id="recordScreen" class="screen">
+    <header class="screen-head"><button class="back" id="recordBack">←</button><b>Новая заметка</b><span></span></header>
+    <div class="record-body">
+      <div id="mic" class="mic">🎙</div>
+      <div id="timer" class="timer">00:00</div>
+      <p id="status">Нажмите, чтобы начать</p>
+      <div id="wave" class="wave"></div>
+      <p id="support" class="hint"></p>
+      <button id="start" class="primary">🎙 Начать запись</button>
+      <button id="stop" class="primary hidden">■ Остановить</button>
+    </div>
+  </section>
+
+  <section id="noteScreen" class="screen">
+    <header class="screen-head"><button class="back" id="noteBack">←</button><b>Заметка</b><button class="delete" id="delete">🗑</button></header>
+    <div class="note-body">
+      <input id="title" class="title" placeholder="Название">
+      <div id="date" class="date"></div>
+      <textarea id="text" placeholder="Текст заметки…"></textarea>
+      <div class="player"><button id="play" class="play">▶</button><div><b>Голосовая запись</b><small id="duration">00:00</small></div></div>
+      <button id="save" class="primary full">Сохранить</button>
+    </div>
+  </section>
+
+  <section id="settingsScreen" class="screen">
+    <header class="screen-head"><button class="back" id="settingsBack">←</button><b>Настройки</b><span></span></header>
+    <div class="settings">
+      <div class="setting"><span>Тёмная тема</span><button id="darkToggle" class="switch">○</button></div>
+      <div class="setting"><span>Хранение</span><small>На этом устройстве</small></div>
+      <div class="setting"><span>Распознавание</span><small>Web Speech API</small></div>
+    </div>
+  </section>
+  <div id="toast" class="toast"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

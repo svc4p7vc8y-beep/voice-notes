@@ -1,0 +1,10 @@
+{
+  "name":"Голосовые заметки",
+  "short_name":"Заметки",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f7f7f8",
+  "theme_color":"#f7f7f8",
+  "lang":"ru",
+  "icons":[]
+}
