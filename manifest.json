@@ -1,10 +1,13 @@
 {
-  "name":"Голосовые заметки",
-  "short_name":"Заметки",
+  "name":"Голосовой ассистент — голосовые заметки",
+  "short_name":"Голосовой ассистент",
   "start_url":"./",
   "display":"standalone",
-  "background_color":"#f7f7f8",
-  "theme_color":"#f7f7f8",
+  "background_color":"#0b0b13",
+  "theme_color":"#0b0b13",
   "lang":"ru",
-  "icons":[]
+  "icons":[
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"},
+    {"src":"apple-touch-icon.png","sizes":"180x180","type":"image/png","purpose":"any"}
+  ]
 }

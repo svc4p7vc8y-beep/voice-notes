@@ -1,49 +1,29 @@
 const $=s=>document.querySelector(s);
-const notesEl=$("#notes"),search=$("#search"),recordScreen=$("#recordScreen"),noteScreen=$("#noteScreen"),settingsScreen=$("#settingsScreen");
-const mic=$("#mic"),timer=$("#timer"),status=$("#status"),wave=$("#wave"),start=$("#start"),stop=$("#stop"),title=$("#title"),text=$("#text"),date=$("#date"),toast=$("#toast");
-let notes=JSON.parse(localStorage.getItem("voiceNotesV2")||"null")||[
- {id:1,title:"Идея для проекта",text:"Нужно сделать приложение, в котором можно быстро записывать мысли голосом.",date:"Сегодня, 14:32",audio:false}
-];
-let current=null,rec=null,stream=null,recognition=null,recording=false,seconds=0,timerId=null,transcript="";
-const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
-
-function save(){localStorage.setItem("voiceNotesV2",JSON.stringify(notes))}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function render(q=""){let arr=notes.filter(n=>(n.title+" "+n.text).toLowerCase().includes(q.toLowerCase()));notesEl.innerHTML=arr.length?arr.map(n=>`<article class="note" data-id="${n.id}"><div class="note-row"><h3>${esc(n.title)}</h3><span>${n.audio?"🎙️":"📝"}</span></div><p>${esc(n.text)}</p><time>${esc(n.date)}</time></article>`).join(""):`<div class="empty">🎙️<strong>Заметок пока нет</strong>Нажмите кнопку записи.</div>`;document.querySelectorAll(".note").forEach(x=>x.onclick=()=>openNote(+x.dataset.id))}
-function show(el){el.classList.add("active")} function hide(el){el.classList.remove("active")}
-function toastMsg(s){toast.textContent=s;toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),1800)}
-function formatTime(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
-function reset(){seconds=0;timer.textContent="00:00";recording=false;clearInterval(timerId);mic.classList.remove("live");wave.classList.remove("live");start.classList.remove("hidden");stop.classList.add("hidden");status.textContent="Нажмите, чтобы начать";transcript=""}
-function titleFrom(t){let w=t.replace(/[.!?]/g,"").split(/\s+/).filter(Boolean);return w.length?w.slice(0,6).join(" ").replace(/^./,c=>c.toUpperCase()):"Новая заметка"}
-async function startRecording(){
- try{
-   stream=await navigator.mediaDevices.getUserMedia({audio:true});
-   rec=new MediaRecorder(stream);
-   const chunks=[];
-   rec.ondataavailable=e=>chunks.push(e.data);
-   rec.onstop=()=>{stream?.getTracks().forEach(t=>t.stop());finish(chunks)};
-   rec.start();
- }catch(e){status.textContent="Нет доступа к микрофону";toastMsg("Разрешите микрофон в настройках Safari");return}
- recording=true;seconds=0;timerId=setInterval(()=>{seconds++;timer.textContent=formatTime(seconds)},1000);
- start.classList.add("hidden");stop.classList.remove("hidden");mic.classList.add("live");wave.classList.add("live");status.textContent="Я слушаю… говорите";
- if(Speech){recognition=new Speech();recognition.lang="ru-RU";recognition.continuous=true;recognition.interimResults=true;recognition.onresult=e=>{let s="";for(let i=e.resultIndex;i<e.results.length;i++)s+=e.results[i][0].transcript+" ";transcript=s.trim()};recognition.onerror=e=>console.log(e);try{recognition.start()}catch(e){}}
-}
-function stopRecording(){if(!recording)return;recording=false;clearInterval(timerId);mic.classList.remove("live");wave.classList.remove("live");start.classList.remove("hidden");stop.classList.add("hidden");status.textContent="Обработка…";if(rec&&rec.state!=="inactive")rec.stop();else finish([]);try{recognition?.stop()}catch(e){}}
-function finish(chunks){let t=transcript.trim()||"Голосовая заметка без расшифровки.";let d=new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});let n={id:Date.now(),title:titleFrom(t),text:t,date:`Сегодня, ${d}`,audio:true};notes.unshift(n);save();render(search.value);hide(recordScreen);openNote(n.id);reset()}
-function openNote(id){current=notes.find(n=>n.id===id);if(!current)return;title.value=current.title;text.value=current.text;date.textContent=current.date;show(noteScreen)}
-$("#recordFab").onclick=()=>{reset();show(recordScreen)}
-$("#recordBack").onclick=()=>{if(recording)stopRecording();hide(recordScreen)}
-start.onclick=startRecording;stop.onclick=stopRecording;
-$("#noteBack").onclick=()=>hide(noteScreen);
-$("#save").onclick=()=>{if(!current)return;current.title=title.value.trim()||"Без названия";current.text=text.value.trim();save();render(search.value);toastMsg("Сохранено")}
-$("#delete").onclick=()=>{if(!current)return;if(confirm("Удалить заметку?")){notes=notes.filter(n=>n.id!==current.id);save();render(search.value);hide(noteScreen)}}
-search.oninput=e=>render(e.target.value);
-$("#settingsBtn").onclick=()=>show(settingsScreen);$("#settingsBack").onclick=()=>hide(settingsScreen);
-function toggleDark(){document.body.classList.toggle("dark");localStorage.setItem("dark",document.body.classList.contains("dark")?"1":"0");$("#darkToggle").textContent=document.body.classList.contains("dark")?"●":"○"}
-$("#themeBtn").onclick=toggleDark;$("#darkToggle").onclick=toggleDark;
-if(localStorage.getItem("dark")==="1")document.body.classList.add("dark");
-wave.innerHTML="<i></i>".repeat(9);
-if(!navigator.mediaDevices?.getUserMedia)$("#support").textContent="Для записи нужен Safari с доступом к микрофону.";
-if(!Speech)$("#support").textContent="Запись доступна, но автоматическая расшифровка речи этим браузером не поддерживается.";
-render();
-if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(console.log));
+let db,notes=[],filter="all",current=null,recording=false,rec=null,stream=null,recognition=null,transcript="",chunks=[],timerId=null,seconds=0,pressTimer=null,audio=null;
+const DB="VoiceAssistantDB",STORE="notes";
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function openDB(){return new Promise((resolve,reject)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:"id"});r.onsuccess=()=>{db=r.result;resolve()};r.onerror=()=>reject(r.error)})}
+function getAll(){return new Promise((res,rej)=>{let r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>b.id-a.id));r.onerror=()=>rej(r.error)})}
+function put(n){return new Promise((res,rej)=>{let r=db.transaction(STORE,"readwrite").objectStore(STORE).put(n);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+function del(id){return new Promise((res,rej)=>{let r=db.transaction(STORE,"readwrite").objectStore(STORE).delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+function fmt(s){s=Math.max(0,Math.floor(s||0));return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function titleFrom(t){let w=t.replace(/[.!?,]/g,"").split(/\s+/).filter(Boolean);return w.length?w.slice(0,7).join(" ").replace(/^./,c=>c.toUpperCase()):"Новая заметка"}
+function show(x){x.classList.add("active")}function hide(x){x.classList.remove("active")}
+function msg(s){let t=$("#toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
+function render(){let q=$("#search").value.toLowerCase();let arr=notes.filter(n=>(filter==="fav"?n.favorite:filter==="task"?n.text.includes("надо")||n.text.includes("нужно")||n.text.includes("купить"):true)&&(`${n.title} ${n.text}`).toLowerCase().includes(q));$("#count").textContent=arr.length+" замет"+(arr.length===1?"ка":arr.length<5?"ки":"ок");$("#notes").innerHTML=arr.length?arr.map(n=>`<article class="note" data-id="${n.id}"><div class="note-row"><h3>${esc(n.title)}</h3><button class="star ${n.favorite?"on":""}" data-star="${n.id}">${n.favorite?"★":"☆"}</button></div><p>${esc(n.text).slice(0,170)}${n.text.length>170?"…":""}</p><div class="note-footer"><span>${esc(n.date)}</span>${n.audio?`<span class="audio-pill">▶ ${fmt(n.duration||0)}</span>`:""}</div></article>`).join(""):`<div class="empty"><div class="big">🎙</div><b>Заметок пока нет</b>Зажмите микрофон и скажите первую мысль.`;document.querySelectorAll(".note").forEach(x=>x.onclick=e=>{if(e.target.closest("[data-star]"))return;openNote(+x.dataset.id)});document.querySelectorAll("[data-star]").forEach(b=>b.onclick=async e=>{e.stopPropagation();let n=notes.find(x=>x.id==b.dataset.star);n.favorite=!n.favorite;await put(n);notes=await getAll();render()})}
+function setupWave(){let w=$("#wave");w.innerHTML="";for(let i=0;i<25;i++){let e=document.createElement("i");w.appendChild(e)}}
+async function begin(){if(recording)return;recording=true;chunks=[];transcript="";seconds=0;$("#fab").classList.add("recording");$("#recordPanel").classList.add("live");$("#recordStatus").textContent="Слушаю…";$("#recordHint").textContent="Говорите свободно";$("#liveText").textContent="Слушаю…";$("#timer").textContent="00:00";timerId=setInterval(()=>{$("#timer").textContent=fmt(++seconds)},1000);
+try{stream=await navigator.mediaDevices.getUserMedia({audio:true});let mime=MediaRecorder.isTypeSupported("audio/mp4")?"audio/mp4":(MediaRecorder.isTypeSupported("audio/webm")?"audio/webm":"");rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};rec.start()}catch(e){finish("Нет доступа к микрофону");return}
+const S=window.SpeechRecognition||window.webkitSpeechRecognition;if(S){recognition=new S();recognition.lang="ru-RU";recognition.continuous=true;recognition.interimResults=true;recognition.onresult=e=>{let s="";for(let i=0;i<e.results.length;i++)s+=e.results[i][0].transcript+" ";transcript=s.trim();$("#liveText").textContent=transcript||"Слушаю…"};recognition.onerror=e=>console.log("speech",e.error);try{recognition.start()}catch(e){}}else $("#recordHint").textContent="Запись идёт; этот браузер не дал распознавание речи"}
+function finish(error=""){clearInterval(timerId);try{recognition?.stop()}catch(e){}if(rec&&rec.state!=="inactive")rec.stop();stream?.getTracks().forEach(t=>t.stop());setTimeout(async()=>{recording=false;$("#fab").classList.remove("recording","pressing");$("#recordPanel").classList.remove("live");if(error){msg(error);return}let blob=chunks.length?new Blob(chunks,{type:rec?.mimeType||"audio/mp4"}):null;let text=transcript.trim()||"Голосовая заметка без расшифровки.";let n={id:Date.now(),title:titleFrom(text),text,date:"Сегодня, "+new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}),favorite:false,audioBlob:blob,duration:seconds};await put(n);notes=await getAll();render();msg("Сохранено: текст + аудио");$("#liveText").textContent=text},120)}
+function openNote(id){current=notes.find(n=>n.id===id);if(!current)return;$("#title").value=current.title;$("#text").value=current.text;$("#date").textContent=current.date;$("#favorite").textContent=current.favorite?"★ Избранное":"☆ Избранное";$("#player").classList.toggle("hidden",!current.audioBlob);if(current.audioBlob){if(audio)URL.revokeObjectURL(audio.src);audio=new Audio(URL.createObjectURL(current.audioBlob));audio.ontimeupdate=()=>{$("#playTime").textContent=fmt(audio.currentTime);$("#seek").value=audio.duration?(audio.currentTime/audio.duration*100):0};audio.onloadedmetadata=()=>{$("#duration").textContent=fmt(audio.duration)}}show($("#noteScreen"))}
+$("#play").onclick=()=>{if(!audio)return;if(audio.paused){audio.play();$("#play").textContent="❚❚"}else{audio.pause();$("#play").textContent="▶"}};$("#seek").oninput=e=>{if(audio&&audio.duration)audio.currentTime=audio.duration*e.target.value/100};
+$("#save").onclick=async()=>{current.title=$("#title").value.trim()||"Без названия";current.text=$("#text").value.trim();await put(current);notes=await getAll();render();msg("Сохранено")};
+$("#favorite").onclick=async()=>{current.favorite=!current.favorite;$("#favorite").textContent=current.favorite?"★ Избранное":"☆ Избранное";await put(current);notes=await getAll();render()};
+$("#delete").onclick=async()=>{if(confirm("Удалить заметку?")){await del(current.id);notes=await getAll();render();hide($("#noteScreen"));msg("Удалено")}};
+$("#noteBack").onclick=()=>hide($("#noteScreen"));$("#settingsBtn").onclick=()=>show($("#settingsScreen"));$("#settingsBack").onclick=()=>hide($("#settingsScreen"));$("#favNav").onclick=()=>{filter="fav";document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));document.querySelector('[data-filter="fav"]').classList.add("active");render()};
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{filter=c.dataset.filter;document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));c.classList.add("active");render()});$("#search").oninput=render;
+function theme(){document.body.classList.toggle("light");localStorage.setItem("theme",document.body.classList.contains("light")?"light":"dark");$("#darkToggle").textContent=document.body.classList.contains("light")?"○":"●";$("#themeBtn").textContent=document.body.classList.contains("light")?"☾":"☼"}
+$("#themeBtn").onclick=theme;$("#darkToggle").onclick=theme;
+const fab=$("#fab");fab.addEventListener("pointerdown",e=>{e.preventDefault();fab.classList.add("pressing");pressTimer=setTimeout(()=>{pressTimer=null;begin()},300)});fab.addEventListener("pointerup",e=>{e.preventDefault();if(pressTimer){clearTimeout(pressTimer);pressTimer=null;fab.classList.remove("pressing");return}if(recording)finish()});fab.addEventListener("pointercancel",()=>{if(pressTimer)clearTimeout(pressTimer);pressTimer=null;if(recording)finish();fab.classList.remove("pressing")});fab.oncontextmenu=e=>e.preventDefault();
+(async()=>{setupWave();await openDB();notes=await getAll();render();if(localStorage.getItem("theme")==="light")document.body.classList.add("light")})();

@@ -1,58 +1,95 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#f7f7f8">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Голосовые заметки">
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
-  <title>Голосовые заметки</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0b13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Голосовой ассистент">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<title>Голосовой ассистент</title>
 </head>
 <body>
 <div class="app">
-  <main id="home" class="home">
+  <main id="home">
     <header class="topbar">
-      <h1>Мои заметки</h1><button id="themeBtn" class="icon-btn" aria-label="Тема">☾</button>
+      <div>
+        <div class="eyebrow">ГОЛОСОВОЙ АССИСТЕНТ ✦</div>
+        <h1>Мои заметки</h1>
+      </div>
+      <button id="themeBtn" class="round-btn" aria-label="Тема">☼</button>
     </header>
-    <div class="search-wrap"><span>⌕</span><input id="search" type="search" placeholder="Поиск заметок…"></div>
-    <section class="content"><div class="section-label">Заметки</div><div id="notes"></div></section>
-    <button id="recordFab" class="fab" aria-label="Записать">🎙</button>
-    <nav class="nav"><button class="nav-active">☰<small>Заметки</small></button><button>☆<small>Избранное</small></button><button id="settingsBtn">⚙<small>Настройки</small></button></nav>
+
+    <div class="search-wrap">
+      <span>⌕</span><input id="search" type="search" placeholder="Поиск заметок…">
+    </div>
+
+    <div class="chips">
+      <button class="chip active" data-filter="all">Все</button>
+      <button class="chip" data-filter="fav">☆ Избранные</button>
+      <button class="chip" data-filter="task">✓ Задачи</button>
+    </div>
+
+    <section id="recordPanel" class="record-panel">
+      <div class="record-head">
+        <div>
+          <strong id="recordStatus">Готов слушать</strong>
+          <small id="recordHint">Зажмите микрофон и говорите</small>
+        </div>
+        <span id="timer">00:00</span>
+      </div>
+      <div id="wave" class="wave"></div>
+      <div id="liveText" class="live-text">Здесь появится расшифровка речи…</div>
+    </section>
+
+    <section class="content">
+      <div class="section-title"><span id="sectionName">Сегодня</span><span id="count"></span></div>
+      <div id="notes"></div>
+    </section>
+
+    <button id="fab" class="fab" aria-label="Зажмите для записи">
+      <span class="mic">🎙</span><span class="fab-label">Зажмите</span>
+    </button>
+
+    <nav class="nav">
+      <button class="nav-active">▣<small>Заметки</small></button>
+      <button id="favNav">☆<small>Избранное</small></button>
+      <button id="settingsBtn">⚙<small>Настройки</small></button>
+    </nav>
   </main>
 
-  <section id="recordScreen" class="screen">
-    <header class="screen-head"><button class="back" id="recordBack">←</button><b>Новая заметка</b><span></span></header>
-    <div class="record-body">
-      <div id="mic" class="mic">🎙</div>
-      <div id="timer" class="timer">00:00</div>
-      <p id="status">Нажмите, чтобы начать</p>
-      <div id="wave" class="wave"></div>
-      <p id="support" class="hint"></p>
-      <button id="start" class="primary">🎙 Начать запись</button>
-      <button id="stop" class="primary hidden">■ Остановить</button>
-    </div>
-  </section>
-
   <section id="noteScreen" class="screen">
-    <header class="screen-head"><button class="back" id="noteBack">←</button><b>Заметка</b><button class="delete" id="delete">🗑</button></header>
+    <header class="screen-head">
+      <button class="back" id="noteBack">‹</button>
+      <b>Заметка</b>
+      <button class="delete" id="delete">⌫</button>
+    </header>
     <div class="note-body">
       <input id="title" class="title" placeholder="Название">
       <div id="date" class="date"></div>
+      <div id="player" class="player hidden">
+        <button id="play" class="play">▶</button>
+        <div class="player-info"><div class="player-line"><span id="playTime">00:00</span><span id="duration">00:00</span></div><input id="seek" type="range" min="0" max="100" value="0"></div>
+      </div>
       <textarea id="text" placeholder="Текст заметки…"></textarea>
-      <div class="player"><button id="play" class="play">▶</button><div><b>Голосовая запись</b><small id="duration">00:00</small></div></div>
-      <button id="save" class="primary full">Сохранить</button>
+      <div class="actions">
+        <button id="favorite" class="action">☆<small>Избранное</small></button>
+        <button id="save" class="primary action-main">Сохранить</button>
+      </div>
     </div>
   </section>
 
   <section id="settingsScreen" class="screen">
-    <header class="screen-head"><button class="back" id="settingsBack">←</button><b>Настройки</b><span></span></header>
+    <header class="screen-head"><button class="back" id="settingsBack">‹</button><b>Настройки</b><span></span></header>
     <div class="settings">
-      <div class="setting"><span>Тёмная тема</span><button id="darkToggle" class="switch">○</button></div>
+      <div class="brand-card"><img src="icon-512.png"><div><b>Голосовой ассистент</b><small>Ваш личный голосовой блокнот</small></div></div>
+      <div class="setting"><span>Тёмная тема</span><button id="darkToggle" class="switch">●</button></div>
       <div class="setting"><span>Хранение</span><small>На этом устройстве</small></div>
       <div class="setting"><span>Распознавание</span><small>Web Speech API</small></div>
+      <div class="tip"><b>Быстрая запись</b><br>Зажмите кнопку микрофона. Говорите. Отпустите — приложение сохранит оригинальную запись и расшифровку.</div>
     </div>
   </section>
   <div id="toast" class="toast"></div>
